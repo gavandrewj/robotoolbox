@@ -1,0 +1,222 @@
+---
+title: "robotoolbox: an R client for Kobotoolbox"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{robotoolbox: an R client for Kobotoolbox}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  echo = TRUE,
+  comment = "#>"
+)
+
+```
+
+
+# robotoolbox
+
+`robotoolbox` is an R client to access data from the [`KoboToolbox`](https://www.kobotoolbox.org).
+
+`robotoolbox` is built around [`KoboToolbox API v2`](https://support.kobotoolbox.org/api.html) and its main goal is to ease the process by which you access your collected data.
+
+You will need to set your API token and specify your `KoboToolbox` server URL. An API token is a unique identifier, just like a password. It allows the user to authenticate to `Kobotoolbox` APIs to access your data. The easiest way to set up `robotoolbox` is to store the API token and the server url in your `.Renviron`.
+
+We are using the following environment variables `KOBOTOOLBOX_URL` and `KOBOTOOLBOX_TOKEN` for the url and the token. You can use the `usethis` package and the `usethis::edit_r_environ()` to add the following variables to your `.Renviron` file.
+
+```{bash, eval = FALSE, engine = "sh"}
+KOBOTOOLBOX_URL="https://kobo.unhcr.org/"
+KOBOTOOLBOX_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+In an interactive session, you can use directly the `kobo_setup` function.
+
+```{r, eval = FALSE}
+library(robotoolbox)
+kobo_setup(url = "https://kobo.unhcr.org",
+           token = "xxxxxxxxxxxxxxxxxxxxxxxxxx")
+```
+
+You can get your `token` manually through the `Kobotoolbox` web interface in your account settings. There is also a `kobo_token` function to do the same thing automagically from `R`.
+
+```{r, eval = FALSE}
+token <- kobo_token(username = "cool_user_name",
+                    password = "gRe@TP@$$WoRd",
+                    overwrite = TRUE)
+```
+
+This token can then be used in the setup through `kobo_setup` or in your `.Renviron`.
+
+```{r, eval = FALSE}
+kobo_setup(url = "https://kobo.unhcr.org",
+           token = token)
+```
+
+Settings can be checked using `kobo_settings` function.
+
+```{r, eval = FALSE}
+kobo_settings()
+## <robotoolbox settings>
+##    KoboToolbox URL: https://kobo.unhcr.org/
+##    KoboToolbox API Token: xxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+# Kobotoolbox projects
+
+## List your projects
+
+All your `Kobotoolbox` projects also named `asset` can be checked and listed through the web interface.
+
+```{r, echo = FALSE}
+knitr::include_graphics("./img/list_assets.png")
+```
+
+Using `robotoolbox`, you can do something similar from `R` with the `kobo_asset_list` function.
+
+```{r, echo = FALSE}
+library(robotoolbox)
+library(dplyr)
+asset_list <- robotoolbox::asset_list
+```
+
+```{r, eval = FALSE}
+library(robotoolbox)
+library(dplyr)
+asset_list <- kobo_asset_list()
+
+asset_list |>
+  slice_head(n = 6) |>
+  knitr::kable()
+```
+
+```{r, echo = FALSE}
+asset_list |>
+  slice_head(n = 6) |>
+  knitr::kable()
+```
+
+## KoboToolbox asset
+
+You can also manipulate directly each `asset` (project) using `kobo_asset`. In the server, an asset is uniquely identified by a `uid`.
+
+```{r, eval = FALSE}
+uid <- "aYuTZn9vegi3Z49MXwKjep"
+asset <- kobo_asset(uid)
+asset
+```
+
+```{r, echo = FALSE}
+asset <- robotoolbox::asset_ml
+asset
+```
+
+Since `asset_list`, the list of assets, is a `data.frame`, we can subset it, and select the `uid` of interest based on the available metadata.
+
+As an example, you can get the `uid` associated to the project onamed `Multiple languages`.
+
+```{r, eval = FALSE}
+asset_list |>
+  filter(name == "Multiple languages") |>
+  pull(uid)
+```
+
+```{r, echo = FALSE}
+asset_list |>
+  filter(name == "Multiple languages") |>
+  pull(uid)
+```
+
+And it's then possible to get the associated `asset` object, using the `kobo_asset` function.
+
+
+```{r, eval = FALSE}
+asset_list |>
+  filter(name == "Multiple languages") |>
+  pull(uid) |>
+  kobo_asset()
+```
+
+```{r, echo = FALSE}
+asset
+```
+
+A `kobo_asset` give you some basic information about your project. You can easily get the name, the number of submissions, when the project was created, and when it was last modified.
+
+# Kobotoolbox data
+
+The main function on the `robotoolbox` package is `kobo_data` (or `kobo_submissions` its alias), and as the name suggests, it loads your data from the server.
+
+We can illustrate its usage by trying to read data from the same project named `Multiple languages`.
+
+We can follow the steps above to get uid, and the asset.
+
+```{r, eval = FALSE}
+asset_ml <- asset_list |>
+  filter(name == "Multiple languages") |>
+  pull(uid) |>
+  kobo_asset()
+asset_ml
+```
+
+```{r, echo = FALSE}
+asset
+```
+
+We can then use the `asset_ml` object, which uniquely identify the `Multiple languages` asset to read its data
+
+```{r, echo = FALSE}
+data_ml <- robotoolbox::data_ml_default
+```
+
+```{r, eval = FALSE}
+data_ml <- kobo_data(asset_ml)
+
+data_ml |>
+  select(start:uuid) |>
+  slice_head(n = 3) |>
+  knitr::kable()
+```
+
+```{r, echo = FALSE}
+data_ml |>
+  select(start:uuid) |>
+  slice_head(n = 3) |>
+  knitr::kable()
+```
+
+# Kobotoolbox form
+
+`robotoolbox` allows you to represent and manipulate `Kobotoolbox` forms. You can pull the form from a particular project using the `kobo_form` function
+
+```{r}
+asset_ml |>
+  kobo_form() |>
+  knitr::kable()
+```
+
+Which is a representation in `robotoolbox` of the following form
+
+
+### Survey questions
+
+| type             | name      | label::English (en)  | label::Francais (fr)               | label::Arabic (ar) |
+|:-----------------|:----------|:---------------------|:-----------------------------------|:-------------------|
+| start            | start     |                      |                                    |                    |
+| end              | end       |                      |                                    |                    |
+| today            | today     |                      |                                    |                    |
+| text             | full_name | What is your name?   | Quel est votre nom ?               | ما اسمك ؟          |
+| select_one yesno | pet_yesno | Do you have any pet? | Avez-vous un animal de compagnie ? | هل تمتلك حيوانا أليفا ؟ |
+
+
+### Choices
+
+| list_name | name | label::English (en) | label::Francais (fr) | label::Arabic (ar) |
+|:----------|-----:|:--------------------|:---------------------|:-------------------|
+| yesno     |    1 | Yes                 | Oui                  | نعم                |
+| yesno     |    0 | No                  | Non                  | لا                 |
+|           |      |                     |                      |                    |
